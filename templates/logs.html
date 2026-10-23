@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Security Audit Logs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Structured Security Audit Logs</h1>
+    <p class="page-subtitle">Complete chronological event record. Secrets, raw keys, and passwords are never logged.</p>
+  </div>
+</div>
+
+<!-- Log Filter Form -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+  <form method="GET" action="{{ url_for('security.logs_view') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+    <div style="flex: 1; min-width: 200px;">
+      <label class="form-label" style="font-size: 0.75rem;">Filter by Event Type</label>
+      <input type="text" name="type" class="form-control" placeholder="e.g. TAMPER, LOGIN, FILE" value="{{ selected_type }}">
+    </div>
+    <div style="flex: 1; min-width: 200px;">
+      <label class="form-label" style="font-size: 0.75rem;">Filter by Username</label>
+      <input type="text" name="user" class="form-control" placeholder="e.g. admin, student" value="{{ selected_user }}">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.55rem 1rem;">Filter Logs</button>
+      <a href="{{ url_for('security.logs_view') }}" class="btn btn-secondary btn-sm" style="padding: 0.55rem 1rem;">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Logs Table -->
+<div class="card">
+  {% if logs %}
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Timestamp</th>
+          <th>Event Type</th>
+          <th>User</th>
+          <th>IP Address</th>
+          <th>Structured Audit Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="mono" style="color: var(--text-muted); font-size: 0.75rem;">#{{ l.id }}</td>
+          <td class="mono" style="font-size: 0.75rem;">{{ l.timestamp }}</td>
+          <td>
+            <span class="badge {% if 'TAMPER' in l.event_type or 'MISMATCH' in l.event_type or 'BLOCKED' in l.event_type or 'FAILURE' in l.event_type %}badge-red{% elif 'SUCCESS' in l.event_type or 'VERIFIED' in l.event_type or 'INIT' in l.event_type %}badge-green{% elif 'KEY' in l.event_type %}badge-purple{% else %}badge-blue{% endif %}">
+              {{ l.event_type }}
+            </span>
+          </td>
+          <td><strong>{{ l.username }}</strong></td>
+          <td class="mono" style="font-size: 0.75rem;">{{ l.ip_address }}</td>
+          <td class="mono" style="font-size: 0.75rem;">{{ l.details }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 2rem;">
+    No log entries matching the selected filter.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

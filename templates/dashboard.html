@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}System Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">System Status & Security Overview</h1>
+    <p class="page-subtitle">Real-time status of cryptographic services, multi-cloud storage, and AI threat detection.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('upload.upload_file') }}" class="btn btn-primary">+ Upload New File</a>
+  </div>
+</div>
+
+<!-- Key Stat Cards -->
+<div class="grid-cards">
+  <div class="card">
+    <div class="stat-label">Registered Users</div>
+    <div class="stat-value">{{ total_users }}</div>
+    <div class="stat-desc">PBKDF2-HMAC-SHA256</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Encrypted Files</div>
+    <div class="stat-value">{{ total_files }}</div>
+    <div class="stat-desc">ChaCha20-Poly1305 AEAD</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Active Session Keys</div>
+    <div class="stat-value">{{ active_keys }}</div>
+    <div class="stat-desc">HMAC-DRBG SHA-256 (ASKG)</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Cloud Fragments</div>
+    <div class="stat-value">{{ total_fragments }}</div>
+    <div class="stat-desc">Cloud A / B / C Distribution</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Integrity Status</div>
+    <div class="stat-value" style="color: {% if integrity_alerts == 0 %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+      {% if integrity_alerts == 0 %}100% Valid{% else %}{{ integrity_alerts }} Tampered{% endif %}
+    </div>
+    <div class="stat-desc">SHA3-256 Blockchain Ledger</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Detected Anomalies</div>
+    <div class="stat-value" style="color: {% if detected_anomalies == 0 %}var(--text-main){% else %}var(--accent-amber){% endif %};">
+      {{ detected_anomalies }}
+    </div>
+    <div class="stat-desc">Isolation Forest Engine</div>
+  </div>
+</div>
+
+<!-- Architecture & Service Status Panel -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="card">
+    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      Cryptographic Framework Status
+    </h3>
+    <table style="font-size: 0.825rem;">
+      <tr>
+        <td style="color: var(--text-muted);">Payload Encryption</td>
+        <td><span class="badge badge-blue">ChaCha20-Poly1305</span> (256-bit + 12B Nonce)</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Session Key Generator</td>
+        <td><span class="badge badge-green">ASKG / HMAC-DRBG</span> (NIST SP 800-90A)</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Post-Quantum KEM</td>
+        <td>
+          <span class="badge {% if kem_status.is_fallback %}badge-amber{% else %}badge-green{% endif %}">
+            {{ kem_status.parameter_set }}
+          </span>
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">FIPS 203 Lattice KEM</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Key Wrapping Layer</td>
+        <td><span class="badge badge-purple">HKDF-SHA256</span> (RFC 5869 Envelope)</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Integrity Ledger</td>
+        <td>
+          <span class="badge badge-blue">SHA3-256</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">{{ chain_msg }}</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size: 1rem; color: #fff; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      Simulated Multi-Cloud Storage Providers
+    </h3>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      {% for cloud in cloud_health %}
+      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 0.6rem 0.85rem; border-radius: 6px; border: 1px solid var(--border-color);">
+        <div>
+          <strong style="color: #fff; font-size: 0.9rem;">{{ cloud.name }}</strong>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Stored Fragments: {{ cloud.fragments_stored }}</div>
+        </div>
+        <div>
+          <span class="badge {% if cloud.status == 'Online' %}badge-green{% else %}badge-red{% endif %}">
+            {{ cloud.status }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top: 1rem; font-size: 0.75rem; color: var(--text-muted);">
+      Notice: Multi-cloud repositories are simulated locally for academic reproducibility without external API credentials.
+    </div>
+  </div>
+</div>
+
+<!-- Recent Files Table -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3 style="font-size: 1rem; color: #fff;">Recent Encrypted Files</h3>
+    <a href="{{ url_for('dashboard.files_view') }}" style="font-size: 0.85rem; color: var(--accent-cyan); text-decoration: none;">View All Files &rarr;</a>
+  </div>
+
+  {% if recent_files %}
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>File ID</th>
+          <th>Original File Name</th>
+          <th>File Size</th>
+          <th>Upload Time</th>
+          <th>SHA3-256 Hash</th>
+          <th>Uploaded By</th>
+          <th>Storage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in recent_files %}
+        <tr>
+          <td class="mono" style="color: var(--accent-cyan);">{{ f.file_id }}</td>
+          <td><strong>{{ f.original_filename }}</strong></td>
+          <td>{{ (f.file_size / 1024)|round(1) }} KB</td>
+          <td>{{ f.upload_time }}</td>
+          <td class="mono" style="font-size: 0.75rem;">{{ f.sha3_hash[:16] }}...</td>
+          <td>{{ f.username }}</td>
+          <td><span class="badge badge-blue">Cloud A/B/C</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="font-size: 0.875rem; color: var(--text-muted); text-align: center; padding: 2rem;">
+    No files encrypted yet. <a href="{{ url_for('upload.upload_file') }}" style="color: var(--accent-cyan);">Upload your first test file</a>.
+  </p>
+  {% endif %}
+</div>
+
+<!-- Recent Security Audit Log -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3 style="font-size: 1rem; color: #fff;">Live Security Audit Events</h3>
+    <a href="{{ url_for('security.logs_view') }}" style="font-size: 0.85rem; color: var(--accent-cyan); text-decoration: none;">Full Audit Logs &rarr;</a>
+  </div>
+
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Event Type</th>
+          <th>User</th>
+          <th>Structured Audit Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ev in recent_events %}
+        <tr>
+          <td class="mono" style="font-size: 0.75rem;">{{ ev.timestamp }}</td>
+          <td>
+            <span class="badge {% if 'TAMPER' in ev.event_type or 'MISMATCH' in ev.event_type or 'BLOCKED' in ev.event_type %}badge-red{% elif 'SUCCESS' in ev.event_type or 'VERIFIED' in ev.event_type %}badge-green{% else %}badge-blue{% endif %}">
+              {{ ev.event_type }}
+            </span>
+          </td>
+          <td>{{ ev.username }}</td>
+          <td class="mono" style="font-size: 0.75rem;">{{ ev.details }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

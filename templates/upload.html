@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Cryptographic File Upload{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Cryptographic File Upload Pipeline</h1>
+    <p class="page-subtitle">Uploads execute the full 8-stage hybrid cryptosystem with ML threat validation.</p>
+  </div>
+</div>
+
+<div class="card" style="max-width: 680px; margin: 0 auto 2rem auto;">
+  <form method="POST" action="{{ url_for('upload.upload_file') }}" enctype="multipart/form-data" id="uploadForm">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size: 2rem; color: var(--accent-cyan); margin-bottom: 0.5rem;">&#x21E7;</div>
+      <p style="font-weight: 600; color: #fff; margin-bottom: 0.25rem;">Click to select file or drag & drop</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted);" id="fileSelectedText">Supports documents, images, binaries, and text files (up to 16 MB)</p>
+      <input type="file" name="file" id="fileInput" style="display: none;" required onchange="handleFileSelect(this)">
+    </div>
+
+    <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        Active Algorithm: <strong style="color: #fff;">ChaCha20-Poly1305 + {{ kem_status.parameter_set }}</strong>
+      </div>
+      <button type="submit" class="btn btn-primary" id="uploadBtn">
+        Encrypt & Distribute to Multi-Cloud
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+<!-- Full Pipeline Verification & Metrics Display -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.2rem; color: #fff;">Pipeline Execution Verified: {{ result.original_filename }}</h2>
+      <p style="font-size: 0.8rem; color: var(--accent-green); margin-top: 0.2rem;">
+        &#x2714; Successfully encrypted, encapsulated with post-quantum ML-KEM, hashed via SHA3-256, and distributed to 3 clouds.
+      </p>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 0.75rem; color: var(--text-muted);">Total Pipeline Latency</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono);">
+        {{ result.metrics.total_time_ms }} ms
+      </div>
+    </div>
+  </div>
+
+  <!-- 8-Stage Step Cards -->
+  <div class="pipeline-stepper">
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 1</div>
+      <div class="pipe-step-title">AI Threat Check</div>
+      <div class="pipe-step-metric">{{ result.metrics.ml_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--accent-green); margin-top: 0.25rem;">Risk: {{ result.threat_eval.risk_score }}</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 2</div>
+      <div class="pipe-step-title">ASKG Keygen</div>
+      <div class="pipe-step-metric">{{ result.metrics.keygen_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">{{ result.key_id }}</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 3</div>
+      <div class="pipe-step-title">ChaCha20 AEAD</div>
+      <div class="pipe-step-metric">{{ result.metrics.enc_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">256-bit Key</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 4</div>
+      <div class="pipe-step-title">ML-KEM + HKDF</div>
+      <div class="pipe-step-metric">{{ result.metrics.kem_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--accent-green); margin-top: 0.25rem;">FIPS 203 Wrap</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 5</div>
+      <div class="pipe-step-title">SHA3-256 Hash</div>
+      <div class="pipe-step-metric">{{ result.metrics.hash_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">Cryptographic Digest</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 6</div>
+      <div class="pipe-step-title">Blockchain Ledger</div>
+      <div class="pipe-step-metric">{{ result.metrics.blockchain_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--accent-cyan); margin-top: 0.25rem;">Block #{{ result.block_index }}</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 7</div>
+      <div class="pipe-step-title">Fragmentation</div>
+      <div class="pipe-step-metric">{{ result.metrics.frag_time_ms }} ms</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">3 Cloud Chunks</div>
+    </div>
+    <div class="pipe-step completed">
+      <div class="pipe-step-num">STAGE 8</div>
+      <div class="pipe-step-title">Multi-Cloud Store</div>
+      <div class="pipe-step-metric">&#x2714; OK</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;">Cloud A / B / C</div>
+    </div>
+  </div>
+
+  <!-- Fragment Storage Details Table -->
+  <h3 style="font-size: 0.95rem; color: #fff; margin: 1.5rem 0 0.75rem 0;">Fragment Distribution Across Simulated Clouds</h3>
+  <div class="table-container" style="margin-bottom: 1rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Fragment Index</th>
+          <th>Destination Provider</th>
+          <th>Physical Filename</th>
+          <th>Fragment SHA3-256</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for frag in result.fragments %}
+        <tr>
+          <td class="mono">Part #{{ frag.fragment_index }}</td>
+          <td><span class="badge badge-blue">{{ frag.cloud_provider }}</span></td>
+          <td class="mono" style="font-size: 0.75rem;">{{ frag.fragment_filename }}</td>
+          <td class="mono" style="font-size: 0.75rem;">{{ frag.sha3_hash[:24] }}...</td>
+          <td>{{ frag.size_bytes }} bytes</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cryptographic Artifact Identifiers -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; background: var(--bg-secondary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+    <div>
+      <span style="color: var(--text-muted); display: block;">File Identifier:</span>
+      <code class="mono" style="color: var(--accent-cyan);">{{ result.file_id }}</code>
+    </div>
+    <div>
+      <span style="color: var(--text-muted); display: block;">Encrypted Payload SHA3-256 Digest:</span>
+      <code class="mono" style="font-size: 0.75rem;">{{ result.sha3_hash }}</code>
+    </div>
+    <div>
+      <span style="color: var(--text-muted); display: block;">Blockchain Block Hash:</span>
+      <code class="mono" style="font-size: 0.75rem;">{{ result.block_hash }}</code>
+    </div>
+    <div>
+      <span style="color: var(--text-muted); display: block;">Session Key ID (ASKG):</span>
+      <code class="mono" style="color: var(--accent-green);">{{ result.key_id }}</code> (Plaintext key zeroed from RAM)
+    </div>
+  </div>
+
+  <div style="margin-top: 1.25rem; display: flex; gap: 1rem;">
+    <a href="{{ url_for('download.download_file', file_id=result.file_id) }}" class="btn btn-primary">
+      Test Download & Integrity Verification
+    </a>
+    <a href="{{ url_for('dashboard.files_view') }}" class="btn btn-secondary">
+      View in File Registry
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function handleFileSelect(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const sizeKb = (file.size / 1024).toFixed(1);
+    document.getElementById('fileSelectedText').innerHTML = 
+      `<strong style="color: var(--accent-cyan);">${file.name}</strong> (${sizeKb} KB selected)`;
+  }
+}
+
+// Drag and drop handling
+const dropZone = document.getElementById('dropZone');
+['dragenter', 'dragover'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  }, false);
+});
+['dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+  }, false);
+});
+dropZone.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  if (files.length) {
+    document.getElementById('fileInput').files = files;
+    handleFileSelect(document.getElementById('fileInput'));
+  }
+});
+</script>
+{% endblock %}

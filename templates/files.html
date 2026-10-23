@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}My Files Registry{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Encrypted File Registry</h1>
+    <p class="page-subtitle">Inspect distributed multi-cloud fragments, test SHA3 blockchain integrity, or simulate cloud tampering.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('upload.upload_file') }}" class="btn btn-primary">+ Upload New File</a>
+  </div>
+</div>
+
+<!-- Tampering Verification Modal / Banner -->
+<div id="tamperResultBanner" style="display: none; margin-bottom: 1.5rem;" class="card">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+      <h3 id="tamperTitle" style="font-size: 1.1rem; color: #fff;">Tampering Verification</h3>
+      <p id="tamperMsg" style="font-size: 0.85rem; margin-top: 0.25rem;"></p>
+    </div>
+    <button onclick="document.getElementById('tamperResultBanner').style.display='none'" class="btn btn-secondary btn-sm">Close</button>
+  </div>
+  <div style="margin-top: 1rem; background: var(--bg-secondary); padding: 0.85rem; border-radius: 6px; font-family: var(--font-mono); font-size: 0.75rem;">
+    <div>Expected SHA3-256 (Blockchain): <span id="expectedHashText" style="color: var(--accent-green);"></span></div>
+    <div style="margin-top: 0.35rem;">Calculated SHA3-256 (Cloud Fragments): <span id="calculatedHashText" style="color: var(--accent-red);"></span></div>
+    <div style="margin-top: 0.5rem; font-weight: 700;" id="tamperVerdict"></div>
+  </div>
+</div>
+
+<div class="card">
+  {% if files %}
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>File ID</th>
+          <th>Filename</th>
+          <th>Size</th>
+          <th>Uploaded At</th>
+          <th>Encryption</th>
+          <th>KEM Protection</th>
+          <th>SHA3-256 Digest</th>
+          <th>Storage</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in files %}
+        <tr>
+          <td class="mono" style="color: var(--accent-cyan);">{{ f.file_id }}</td>
+          <td><strong>{{ f.original_filename }}</strong></td>
+          <td>{{ (f.file_size / 1024)|round(1) }} KB</td>
+          <td style="font-size: 0.8rem;">{{ f.upload_time }}</td>
+          <td><span class="badge badge-blue">ChaCha20</span></td>
+          <td><span class="badge badge-green">{{ f.kem_param }}</span></td>
+          <td class="mono" style="font-size: 0.75rem;" title="{{ f.sha3_hash }}">{{ f.sha3_hash[:16] }}...</td>
+          <td>
+            <span class="badge badge-purple" title="Distributed across Cloud A, B, and C">Cloud A/B/C</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <a href="{{ url_for('download.download_file', file_id=f.file_id) }}" class="btn btn-primary btn-sm" title="Verify SHA3 and Decrypt with ML-KEM + ChaCha20">
+                Download
+              </a>
+              <button onclick="checkIntegrity('{{ f.file_id }}')" class="btn btn-secondary btn-sm" title="Check SHA3 Hash Against Blockchain">
+                Verify
+              </button>
+              <button onclick="simulateTampering('{{ f.file_id }}')" class="btn btn-danger btn-sm" title="Simulate Bit Corruption in Cloud A">
+                Simulate Tamper
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 3rem 1rem;">
+    <div style="font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem;">&#x1F4C1;</div>
+    <h3 style="color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem;">No Encrypted Files Found</h3>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+      Upload a test file to inspect fragmentation, post-quantum key encapsulation, and blockchain hashing.
+    </p>
+    <a href="{{ url_for('upload.upload_file') }}" class="btn btn-primary">Upload File</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+async function checkIntegrity(fileId) {
+  try {
+    const res = await fetch(`/verify-integrity/${fileId}`);
+    const data = await res.json();
+    const banner = document.getElementById('tamperResultBanner');
+    banner.style.display = 'block';
+    
+    document.getElementById('expectedHashText').innerText = data.expected_hash || 'N/A';
+    document.getElementById('calculatedHashText').innerText = data.actual_hash || 'N/A';
+
+    if (data.is_valid) {
+      document.getElementById('tamperTitle').innerText = `Integrity Verified: ${fileId}`;
+      document.getElementById('tamperTitle').style.color = 'var(--accent-green)';
+      document.getElementById('tamperMsg').innerText = data.message;
+      document.getElementById('tamperVerdict').innerHTML = '<span style="color: var(--accent-green);">STATUS: INTEGRITY VERIFIED (NO TAMPERING)</span>';
+    } else {
+      document.getElementById('tamperTitle').innerText = `TAMPERING DETECTED: ${fileId}`;
+      document.getElementById('tamperTitle').style.color = 'var(--accent-red)';
+      document.getElementById('tamperMsg').innerText = data.message;
+      document.getElementById('tamperVerdict').innerHTML = '<span style="color: var(--accent-red);">STATUS: TAMPERING DETECTED - DOWNLOAD HALTED</span>';
+    }
+    banner.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    alert('Integrity check error: ' + err);
+  }
+}
+
+async function simulateTampering(fileId) {
+  if (!confirm(`Simulate unauthorized tampering on ${fileId}?\nThis will modify bytes in Cloud Provider A's fragment to demonstrate cryptographic integrity detection.`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/security/simulate-tamper', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_id: fileId })
+    });
+    const data = await res.json();
+    const banner = document.getElementById('tamperResultBanner');
+    banner.style.display = 'block';
+
+    document.getElementById('expectedHashText').innerText = data.expected_hash;
+    document.getElementById('calculatedHashText').innerText = data.calculated_hash;
+
+    document.getElementById('tamperTitle').innerText = `TAMPERING DEMONSTRATION: ${fileId}`;
+    document.getElementById('tamperTitle').style.color = 'var(--accent-red)';
+    document.getElementById('tamperMsg').innerText = "Fragment in Cloud Provider A was intentionally corrupted.";
+    document.getElementById('tamperVerdict').innerHTML = 
+      `<span style="color: var(--accent-red); font-size: 0.9rem;">
+        --------------------------------<br>
+        INTEGRITY VERIFICATION<br>
+        --------------------------------<br>
+        Expected Hash (Blockchain): ${data.expected_hash}<br>
+        Calculated Hash (Cloud):    ${data.calculated_hash}<br><br>
+        STATUS: TAMPERING DETECTED — DECRYPTION BLOCKED
+      </span>`;
+
+    banner.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    alert('Tampering simulation error: ' + err);
+  }
+}
+</script>
+{% endblock %}

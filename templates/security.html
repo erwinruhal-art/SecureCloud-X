@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}AI Threat Detection & Behavioral Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">AI Threat Detection & Behavioral Analysis</h1>
+    <p class="page-subtitle">Isolation Forest anomaly detection engine monitoring session activity in real-time.</p>
+  </div>
+</div>
+
+<!-- Interactive ML Demonstration Panel (Module 16) -->
+<div class="card" style="margin-bottom: 2rem; border-color: rgba(0, 229, 255, 0.4);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.15rem; color: #fff;">Interactive User Behavior Threat Simulator</h2>
+      <p style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.2rem;">
+        Demonstrate how the Isolation Forest model evaluates behavior features and triggers automated access blocking.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <button onclick="runSimulation('normal')" class="btn btn-primary" id="btnNormal">
+        Generate Normal Activity
+      </button>
+      <button onclick="runSimulation('suspicious')" class="btn btn-danger" id="btnSuspicious">
+        Generate Suspicious Activity
+      </button>
+    </div>
+  </div>
+
+  <!-- Simulation Outcome Card -->
+  <div id="simResultBox" style="display: none; background: var(--bg-secondary); padding: 1.25rem; border-radius: 6px; border: 1px solid var(--border-color);">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+      <div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">ML Prediction</span>
+        <div id="simPred" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);"></div>
+      </div>
+      <div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Normalized Risk Score</span>
+        <div id="simRisk" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);"></div>
+      </div>
+      <div>
+        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Security Decision</span>
+        <div id="simDecision" style="font-size: 1.5rem; font-weight: 700; font-family: var(--font-mono);"></div>
+      </div>
+    </div>
+
+    <div style="font-size: 0.85rem; padding: 0.75rem; border-radius: 4px; background: rgba(0,0,0,0.3);" id="simActionText"></div>
+
+    <h4 style="font-size: 0.85rem; color: #fff; margin: 1rem 0 0.5rem 0;">Extracted Feature Vector:</h4>
+    <div class="table-container" style="margin-bottom: 0;">
+      <table style="font-size: 0.8rem;">
+        <tbody id="simFeaturesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Configurable Risk Thresholds Card -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="card">
+    <h3 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.75rem;">Configurable Risk Thresholds</h3>
+    <table style="font-size: 0.8rem;">
+      <tr>
+        <td style="color: var(--accent-green);">Low Risk (0.00 – 0.30)</td>
+        <td><strong>ALLOW</strong>: Normal authenticated actions proceed.</td>
+      </tr>
+      <tr>
+        <td style="color: var(--accent-amber);">Medium Risk (0.30 – 0.70)</td>
+        <td><strong>WARN</strong>: Actions allowed, elevated audit logging.</td>
+      </tr>
+      <tr>
+        <td style="color: var(--accent-red);">High Risk (0.70 – 1.00)</td>
+        <td><strong>BLOCK</strong>: Sensitive file operations halted.</td>
+      </tr>
+    </table>
+    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.75rem;">
+      *Thresholds are application-level parameters configured in <code>config.py</code>.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.75rem;">Model & Dataset Information</h3>
+    <table style="font-size: 0.8rem;">
+      <tr>
+        <td style="color: var(--text-muted);">Algorithm</td>
+        <td>Isolation Forest (scikit-learn)</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Contamination Rate</td>
+        <td>15% (Configured baseline)</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Feature Space</td>
+        <td>9 Behavioral Dimensions</td>
+      </tr>
+      <tr>
+        <td style="color: var(--text-muted);">Training Script</td>
+        <td><code>python ml/train_model.py</code></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- Recent ML Threat Decisions -->
+<div class="card">
+  <h3 style="font-size: 1rem; color: #fff; margin-bottom: 1rem;">Recent AI Threat Inference Log</h3>
+  {% if predictions %}
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Risk Score</th>
+          <th>Prediction</th>
+          <th>Decision</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in predictions %}
+        <tr>
+          <td class="mono" style="font-size: 0.75rem;">{{ p.timestamp }}</td>
+          <td>{{ p.username }}</td>
+          <td><span class="badge badge-blue">{{ p.action }}</span></td>
+          <td class="mono" style="font-weight: 700; color: {% if p.risk_score > 0.7 %}var(--accent-red){% elif p.risk_score > 0.3 %}var(--accent-amber){% else %}var(--accent-green){% endif %};">
+            {{ p.risk_score }}
+          </td>
+          <td>
+            <span class="badge {% if p.prediction == 'ANOMALY' %}badge-red{% else %}badge-green{% endif %}">
+              {{ p.prediction }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if p.decision == 'BLOCK' %}badge-red{% elif p.decision == 'WARN' %}badge-amber{% else %}badge-green{% endif %}">
+              {{ p.decision }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 1.5rem;">
+    No ML inference events recorded yet. Run the simulation above to generate live decisions.
+  </p>
+  {% endif %}
+</div>
+
+<script>
+async function runSimulation(type) {
+  try {
+    const res = await fetch('/api/security/simulate-ml', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type })
+    });
+    const data = await res.json();
+    const result = data.result;
+
+    const box = document.getElementById('simResultBox');
+    box.style.display = 'block';
+
+    const predElem = document.getElementById('simPred');
+    predElem.innerText = result.prediction;
+    predElem.style.color = result.prediction === 'ANOMALY' ? 'var(--accent-red)' : 'var(--accent-green)';
+
+    const riskElem = document.getElementById('simRisk');
+    riskElem.innerText = result.risk_score.toFixed(2);
+    riskElem.style.color = result.risk_score >= 0.70 ? 'var(--accent-red)' : (result.risk_score >= 0.30 ? 'var(--accent-amber)' : 'var(--accent-green)');
+
+    const decElem = document.getElementById('simDecision');
+    decElem.innerText = result.decision;
+    decElem.style.color = result.decision === 'BLOCK' ? 'var(--accent-red)' : (result.decision === 'WARN' ? 'var(--accent-amber)' : 'var(--accent-green)');
+
+    const actionText = document.getElementById('simActionText');
+    actionText.innerHTML = `<strong>Action Taken:</strong> ${result.action_taken}`;
+
+    // Render features
+    const tbody = document.getElementById('simFeaturesBody');
+    tbody.innerHTML = '';
+    const feats = result.features;
+    for (const [key, val] of Object.entries(feats)) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td style="color: var(--text-muted);">${key}</td><td class="mono"><strong>${val}</strong></td>`;
+      tbody.appendChild(row);
+    }
+
+    box.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    alert('Simulation error: ' + err);
+  }
+}
+</script>
+{% endblock %}

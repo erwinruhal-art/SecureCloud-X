@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Blockchain Integrity Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Blockchain-Style Integrity Ledger</h1>
+    <p class="page-subtitle">Immutable cryptographic block sequence recording SHA3-256 digests for all multi-cloud files.</p>
+  </div>
+  <div>
+    <button onclick="verifyChainIntegrity()" class="btn btn-primary" id="btnVerifyChain">
+      Verify Full Chain Cryptography
+    </button>
+  </div>
+</div>
+
+<!-- Chain Health Status Banner -->
+<div id="chainStatusCard" class="card" style="margin-bottom: 2rem; border-left: 4px solid {% if chain_ok %}var(--accent-green){% else %}var(--accent-red){% endif %};">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h3 style="font-size: 1.05rem; color: #fff;">Ledger Verification Status</h3>
+      <p id="chainStatusMsg" style="font-size: 0.85rem; color: {% if chain_ok %}var(--accent-green){% else %}var(--accent-red){% endif %}; margin-top: 0.25rem;">
+        {{ chain_msg }}
+      </p>
+    </div>
+    <div>
+      <span class="badge {% if chain_ok %}badge-green{% else %}badge-red{% endif %}" id="chainBadge" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+        {% if chain_ok %}LEDGER VALID{% else %}INTEGRITY BROKEN{% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Block List Visualization -->
+<div class="block-chain-container">
+  {% for b in blocks %}
+  <div class="block-card">
+    <div class="block-index-box">
+      <span class="block-index-title">BLOCK</span>
+      <span class="block-index-num">#{{ b.block_index }}</span>
+      <span class="badge badge-blue" style="margin-top: 0.5rem; font-size: 0.65rem;">{{ b.transaction_info }}</span>
+    </div>
+
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+        <span style="font-size: 0.85rem; font-weight: 600; color: #fff;">
+          {% if b.block_index == 0 %}Genesis Block (Initialization){% else %}File Integrity Record: {{ b.file_id }}{% endif %}
+        </span>
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">{{ b.timestamp }}</span>
+      </div>
+
+      <div class="block-details-grid">
+        <div class="block-detail-item">
+          <strong>Current Block Hash (SHA-256)</strong>
+          <code class="mono" style="color: var(--accent-cyan);">{{ b.current_hash }}</code>
+        </div>
+        <div class="block-detail-item">
+          <strong>Previous Block Hash</strong>
+          <code class="mono" style="color: var(--text-muted);">{{ b.previous_hash }}</code>
+        </div>
+        <div class="block-detail-item">
+          <strong>Encrypted File SHA3-256 Digest</strong>
+          <code class="mono" style="color: var(--accent-green);">{{ b.file_hash }}</code>
+        </div>
+        <div class="block-detail-item">
+          <strong>Target File ID</strong>
+          <code class="mono" style="color: #fff;">{{ b.file_id }}</code>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+async function verifyChainIntegrity() {
+  try {
+    const res = await fetch('/api/blockchain/verify-chain');
+    const data = await res.json();
+    const card = document.getElementById('chainStatusCard');
+    const msg = document.getElementById('chainStatusMsg');
+    const badge = document.getElementById('chainBadge');
+
+    if (data.is_valid) {
+      card.style.borderLeftColor = 'var(--accent-green)';
+      msg.style.color = 'var(--accent-green)';
+      msg.innerText = data.message;
+      badge.className = 'badge badge-green';
+      badge.innerText = 'LEDGER VALID';
+    } else {
+      card.style.borderLeftColor = 'var(--accent-red)';
+      msg.style.color = 'var(--accent-red)';
+      msg.innerText = data.message;
+      badge.className = 'badge badge-red';
+      badge.innerText = 'INTEGRITY BROKEN';
+    }
+  } catch (err) {
+    alert('Verification error: ' + err);
+  }
+}
+</script>
+{% endblock %}

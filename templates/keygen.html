@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Key Generation Lab (ASKG){% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Adaptive Secure Key Generator (ASKG) Lab</h1>
+    <p class="page-subtitle">Application-level session key management based on HMAC-DRBG (SHA-256) with periodic reseeding and key rotation.</p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <button onclick="triggerKeyGen()" class="btn btn-primary" id="btnGenKey">+ Generate Key</button>
+    <button onclick="triggerReseed()" class="btn btn-secondary" id="btnReseed">Reseed DRBG</button>
+    <button onclick="triggerRotate()" class="btn btn-secondary" id="btnRotate">Rotate Active Key</button>
+  </div>
+</div>
+
+<!-- Operational Parameters Cards -->
+<div class="grid-cards">
+  <div class="card">
+    <div class="stat-label">Core Algorithm</div>
+    <div class="stat-value" style="font-size: 1.25rem;">HMAC-DRBG</div>
+    <div class="stat-desc">NIST SP 800-90A Standard</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Underlying Hash</div>
+    <div class="stat-value" style="font-size: 1.25rem;">SHA-256</div>
+    <div class="stat-desc">HMAC Digest Function</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Key Bit Length</div>
+    <div class="stat-value" style="color: var(--accent-cyan);">256 bits</div>
+    <div class="stat-desc">32 bytes symmetric key</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Reseed Count</div>
+    <div class="stat-value" id="statReseedCount">{{ stats.reseed_count }}</div>
+    <div class="stat-desc">OS Entropy Refreshes</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Total Keys Generated</div>
+    <div class="stat-value" id="statTotalKeys">{{ stats.total_keys_generated }}</div>
+    <div class="stat-desc">Session Key Lifecycles</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Active Key ID</div>
+    <div class="stat-value mono" style="font-size: 1.15rem; color: var(--accent-green);" id="statActiveKey">
+      {{ stats.active_key_id }}
+    </div>
+    <div class="stat-desc">Currently in Memory</div>
+  </div>
+</div>
+
+<!-- Key Metadata Registry Card -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3 style="font-size: 1rem; color: #fff;">Key Metadata Audit Registry</h3>
+    <span style="font-size: 0.75rem; color: var(--accent-green); background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">
+      Zero Secret Exposure Guarantee: Raw Keys Never Stored
+    </span>
+  </div>
+
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Key ID</th>
+          <th>Algorithm Construction</th>
+          <th>Bit Length</th>
+          <th>Generation Timestamp</th>
+          <th>Reseed Index</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="keyTableBody">
+        {% for k in key_history %}
+        <tr>
+          <td class="mono" style="color: var(--accent-cyan); font-weight: 700;">{{ k.key_id }}</td>
+          <td>{{ k.algorithm }}</td>
+          <td class="mono">{{ k.key_size }}-bit</td>
+          <td>{{ k.generated_at }}</td>
+          <td class="mono">#{{ k.reseed_counter }}</td>
+          <td>
+            <span class="badge {% if k.status == 'Active' %}badge-green{% elif k.status == 'Rotated' %}badge-amber{% else %}badge-blue{% endif %}">
+              {{ k.status }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ASKG Technical Design Architecture Details -->
+<div class="card">
+  <h3 style="font-size: 1rem; color: #fff; margin-bottom: 0.75rem;">Technical Implementation Details</h3>
+  <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+    <p style="margin-bottom: 0.5rem;">
+      <strong style="color: #fff;">Entropy Source:</strong> The primary seed is gathered strictly from the operating system's cryptographic entropy source (<code>os.urandom(32)</code>). Supplementary inputs (monotonic nanosecond clock drift, process identifier) are mixed during state initialization and reseed operations to ensure independence across process forks.
+    </p>
+    <p style="margin-bottom: 0.5rem;">
+      <strong style="color: #fff;">State Architecture:</strong> The generator maintains internal state <code>(K, V)</code> where <code>K</code> is a 32-byte HMAC key and <code>V</code> is a 32-byte working value. Each generate request produces pseudorandom bits through iterative HMAC-SHA256 calculations followed by an immediate state update.
+    </p>
+    <p>
+      <strong style="color: #fff;">Key Separation:</strong> Keys produced by ASKG are used exclusively for symmetric payload encryption (ChaCha20-Poly1305). Post-quantum encapsulation is performed using ML-KEM-768, and the session key is wrapped using HKDF-SHA256.
+    </p>
+  </div>
+</div>
+
+<script>
+async function triggerKeyGen() {
+  try {
+    const res = await fetch('/api/keygen/generate', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      location.reload();
+    }
+  } catch (err) {
+    alert('Key generation error: ' + err);
+  }
+}
+
+async function triggerReseed() {
+  try {
+    const res = await fetch('/api/keygen/reseed', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      location.reload();
+    }
+  } catch (err) {
+    alert('Reseed error: ' + err);
+  }
+}
+
+async function triggerRotate() {
+  try {
+    const res = await fetch('/api/keygen/rotate', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert('Key rotated successfully. New active key: ' + data.metadata.key_id);
+      location.reload();
+    }
+  } catch (err) {
+    alert('Rotation error: ' + err);
+  }
+}
+</script>
+{% endblock %}

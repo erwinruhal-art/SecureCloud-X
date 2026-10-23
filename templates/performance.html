@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Evaluation & Benchmarks{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Performance Evaluation & Cryptographic Benchmarks</h1>
+    <p class="page-subtitle">Empirical runtime benchmarks across varying payload scales measured directly on this system.</p>
+  </div>
+  <div>
+    <button onclick="runLiveBenchmarks()" class="btn btn-primary" id="btnRunBenchmark">
+      Run Live Benchmark Suite
+    </button>
+  </div>
+</div>
+
+<div id="loadingIndicator" style="display: none; text-align: center; padding: 2rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 2rem;">
+  <div style="color: var(--accent-cyan); font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">Executing Live Benchmark Suite...</div>
+  <p style="font-size: 0.85rem; color: var(--text-muted);">
+    Running genuine measurements for ASKG, ChaCha20-Poly1305, ML-KEM-768, SHA3-256, and Isolation Forest across 10 KB, 100 KB, 1 MB, 5 MB, and 10 MB payloads.
+  </p>
+</div>
+
+<!-- Benchmark Results Table -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3 style="font-size: 1rem; color: #fff;">Cryptographic Pipeline Latencies Across Payload Scales</h3>
+    <span style="font-size: 0.75rem; color: var(--text-muted);">Measured using <code>time.perf_counter()</code></span>
+  </div>
+
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Payload Size</th>
+          <th>ASKG Keygen</th>
+          <th>ChaCha20 Enc</th>
+          <th>ML-KEM-768 Encaps</th>
+          <th>SHA3-256 Hash</th>
+          <th>ML-KEM Decaps</th>
+          <th>ChaCha20 Dec</th>
+          <th>ML Inference</th>
+          <th>Throughput</th>
+        </tr>
+      </thead>
+      <tbody id="benchmarkTableBody">
+        <tr>
+          <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+            Click <strong>"Run Live Benchmark Suite"</strong> above to execute tests on this system.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Module 19: RNG Mechanism Comparison -->
+<div class="card" style="margin-bottom: 2rem;">
+  <h3 style="font-size: 1rem; color: #fff; margin-bottom: 0.5rem;">Key Generation Mechanism Comparison</h3>
+  <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 1rem;">
+    Empirical evaluation of OS CSPRNG, standard HMAC-DRBG, and the proposed ASKG wrapper module.
+  </p>
+
+  <div class="table-container" style="margin-bottom: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Mechanism</th>
+          <th>Avg Latency (50 Iters)</th>
+          <th>Reseed Architecture</th>
+          <th>Key Bit Length</th>
+          <th>Security & Lifecycle Properties</th>
+        </tr>
+      </thead>
+      <tbody id="rngTableBody">
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+            Awaiting benchmark execution.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Academic Disclaimer -->
+<div class="card" style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.6;">
+  <strong style="color: #fff; display: block; margin-bottom: 0.25rem;">Academic Evaluation Note:</strong>
+  All metrics displayed in this panel are measured live on this machine's CPU and memory without hardcoded or fabricated figures. The ASKG module is an application-level key management wrapper around standard HMAC-DRBG (NIST SP 800-90A) and is evaluated here for its operational throughput and lifecycle management features.
+</div>
+
+<script>
+async function runLiveBenchmarks() {
+  const btn = document.getElementById('btnRunBenchmark');
+  const loader = document.getElementById('loadingIndicator');
+  btn.disabled = true;
+  loader.style.display = 'block';
+
+  try {
+    const res = await fetch('/api/performance/run-benchmark', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.success) {
+      // 1. Populate Benchmarks Table
+      const bBody = document.getElementById('benchmarkTableBody');
+      bBody.innerHTML = '';
+      data.benchmarks.forEach(b => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${b.size_label}</strong></td>
+          <td class="mono">${b.keygen_ms} ms</td>
+          <td class="mono" style="color: var(--accent-cyan);">${b.enc_ms} ms</td>
+          <td class="mono" style="color: var(--accent-green);">${b.kem_enc_ms} ms</td>
+          <td class="mono">${b.hash_ms} ms</td>
+          <td class="mono" style="color: var(--accent-green);">${b.kem_dec_ms} ms</td>
+          <td class="mono" style="color: var(--accent-cyan);">${b.dec_ms} ms</td>
+          <td class="mono">${b.ml_ms} ms</td>
+          <td class="mono" style="font-weight: 700;">${b.throughput_mb_s} MB/s</td>
+        `;
+        bBody.appendChild(row);
+      });
+
+      // 2. Populate RNG Comparison Table
+      const rBody = document.getElementById('rngTableBody');
+      rBody.innerHTML = '';
+      data.rng_comparison.forEach(r => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${r.mechanism}</strong></td>
+          <td class="mono" style="color: var(--accent-cyan); font-weight: 700;">${r.avg_time_ms} ms</td>
+          <td>${r.reseed_support}</td>
+          <td class="mono">${r.key_size}</td>
+          <td>${r.security_type}</td>
+        `;
+        rBody.appendChild(row);
+      });
+    }
+  } catch (err) {
+    alert('Benchmark execution error: ' + err);
+  } finally {
+    btn.disabled = false;
+    loader.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}
