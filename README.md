@@ -288,19 +288,3 @@ The suite runs live tests across 10 KB, 100 KB, 1 MB, 5 MB, and 10 MB payloads u
 
 ---
 
-## 22. Top 12 Files to Study for Your Viva / Project Defense
-
-When preparing to explain your project to your professor or viva examiner, study these 12 files:
-
-1. **`app.py`:** Application factory and blueprint wiring.
-2. **`crypto/askg.py`:** The Adaptive Secure Session Key Generator lifecycle implementation.
-3. **`crypto/hmac_drbg.py`:** NIST SP 800-90A HMAC-DRBG state update $(K, V)$ mechanics.
-4. **`crypto/mlkem_service.py`:** Post-quantum ML-KEM-768 FIPS 203 encapsulation abstraction.
-5. **`crypto/key_manager.py`:** HKDF-SHA256 derivation and ChaCha20 session key wrapping.
-6. **`crypto/chacha_service.py`:** ChaCha20-Poly1305 AEAD payload encryption.
-7. **`crypto/hash_service.py`:** SHA3-256 cryptographic hashing and constant-time comparison.
-8. **`blockchain/ledger.py`:** Genesis block creation, block appending, and chain verification.
-9. **`blockchain/integrity.py`:** Reconstructed file verification and tamper detection.
-10. **`storage/fragmentation.py` & `storage/cloud_manager.py`:** Ciphertext chunking and multi-cloud simulation.
-11. **`ml/anomaly_detector.py` & `ml/train_model.py`:** Isolation Forest threat detection and continuous risk scoring.
-12. **`routes/upload_routes.py` & `routes/download_routes.py`:** The full 8-stage upload and download pipelines.
