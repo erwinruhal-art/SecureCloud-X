@@ -136,21 +136,8 @@ User (Browser Client)
 ### Prerequisites
 - Windows 10/11 (or Linux/macOS)
 - Python 3.11 or 3.12
-- VS Code (recommended)
-
-### Installation Commands
-```powershell
-# 1. Navigate to the project directory
-cd "C:\Users\Arnav Singh Sidhu\.gemini\antigravity\scratch\SecureCloud-X"
-
-# 2. (Optional) Create and activate a virtual environment
-python -m venv venv
-.\venv\Scripts\activate
-
-# 3. Install required dependencies
-pip install -r requirements.txt
-```
-
+- VS Code
+  
 ---
 
 ## 12. How to Run the Project
